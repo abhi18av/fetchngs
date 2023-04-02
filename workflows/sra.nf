@@ -25,6 +25,7 @@ include { SRA_FASTQ_FTP           } from '../modules/local/sra_fastq_ftp'
 include { SRA_TO_SAMPLESHEET      } from '../modules/local/sra_to_samplesheet'
 include { SRA_MERGE_SAMPLESHEET   } from '../modules/local/sra_merge_samplesheet'
 include { MULTIQC_MAPPINGS_CONFIG } from '../modules/local/multiqc_mappings_config'
+include { ARIA2                   } from '../modules/nf-core/aria2/main'
 
 /*
 ========================================================================================
@@ -101,13 +102,24 @@ workflow SRA {
             }
             .set { ch_sra_reads }
 
-        //
-        // MODULE: If FTP link is provided in run information then download FastQ directly via FTP and validate with md5sums
-        //
-        SRA_FASTQ_FTP (
-            ch_sra_reads.ftp
-        )
-        ch_versions = ch_versions.mix(SRA_FASTQ_FTP.out.versions.first())
+        if(params.use_aria2) {
+            ARIA2 (
+                ch_sra_reads.ftp
+            )
+            ch_versions = ch_versions.mix(ARIA2.out.versions.first())
+
+            ch_fastq_ftp = ARIA2.out.fastq
+        } else {
+            //
+            // MODULE: If FTP link is provided in run information then download FastQ directly via FTP and validate with md5sums
+            //
+            SRA_FASTQ_FTP (
+                ch_sra_reads.ftp
+            )
+            ch_versions = ch_versions.mix(SRA_FASTQ_FTP.out.versions.first())
+
+            ch_fastq_ftp = SRA_FASTQ_FTP.out.fastq
+        }
 
         //
         // SUBWORKFLOW: Download sequencing reads without FTP links using sra-tools.
@@ -117,9 +129,8 @@ workflow SRA {
         )
         ch_versions = ch_versions.mix(FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS.out.versions.first())
 
-        SRA_FASTQ_FTP
-            .out
-            .fastq
+
+            ch_fastq_ftp
             .mix(FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS.out.reads)
             .map { 
                 meta, fastq ->
