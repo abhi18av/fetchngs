@@ -1,6 +1,6 @@
 
 process ARIA2 {
-    tag "$source_url"
+    tag "$meta.id"
     label 'process_single'
 
     conda "conda-forge::aria2=1.36.0"

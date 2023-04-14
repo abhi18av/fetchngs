@@ -1,6 +1,14 @@
 Changes in module 'nf-core/aria2'
 --- modules/nf-core/aria2/main.nf
 +++ modules/nf-core/aria2/main.nf
+@@ -1,6 +1,6 @@
+ 
+ process ARIA2 {
+-    tag "$source_url"
++    tag "$meta.id"
+     label 'process_single'
+ 
+     conda "conda-forge::aria2=1.36.0"
 @@ -9,30 +9,64 @@
          'quay.io/biocontainers/aria2:1.36.0' }"
  
